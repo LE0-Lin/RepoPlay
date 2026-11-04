@@ -2,7 +2,7 @@
 
 Initial delivery: 2026-10-07. Follow-up delivery review: 2026-10-09.
 
-Environment: Windows PowerShell, Node.js 24.11.1, npm 11.6.2, Next.js 16.4.0, React 19.3.0. No paid model calls, source-code execution, deployment or remote writes were performed.
+Initial environment: Windows PowerShell, Node.js 24.11.1, npm 11.6.2, Next.js 16.4.0, React 19.3.0. The initial local delivery made no paid model calls, executed no imported repository code and performed no deployment or remote writes. GitHub writes were subsequently authorized on 2026-11-04, as recorded below.
 
 ## Automated checks
 
@@ -47,7 +47,17 @@ Verified in the Codex in-app browser, including a 1440 × 1000 desktop viewport 
 - Offline storage fixtures covered denied access, quota failures, missing/corrupt/oversized saved content and source mismatches. User-facing errors exclude raw parser/schema details. Restoring a browser copy revalidates it and does not inherit editorial trust. Actual browser storage permissions were not changed to simulate failures.
 - The production preview process was no longer running when work resumed on 2026-10-09. It was restarted from the existing build; a fresh request to the Report step returned HTTP 200 with its end-of-path and library navigation present. No unnecessary rebuild or model call was made for that restart.
 
-## Limits of verification
+## GitHub checkpoint and dependency refresh — 2026-11-04
+
+- The user authorized creating a GitHub progress repository and pushing the current code. The CLI account was verified as `LE0-Lin`; [LE0-Lin/RepoPlay](https://github.com/LE0-Lin/RepoPlay) was created as **private**. The initial remote `main` SHA matched local commit `eef7f7bc6feea5add51ef2206d8ff8ac70dbfef7`.
+- The first checkpoint preserves the existing prototype. Earlier local work had no Git history; no historical commits were manufactured. `2cd4e23` separately records the dependency patches.
+- Before pushing, staged paths were checked to exclude runtime/build files, local environment files and private-key file types. A signature scan found no matching credential strings, and the two retained AgentConfigScore license notices matched. This bounded scan is not a guarantee that all sensitive material can be detected.
+- A fresh baseline build was blocked by a known Next.js advisory. `npm audit --omit=dev --json` identified Next.js as critical and Zod as high. Published affected/patched ranges were also checked through GitHub's advisory API: [Next.js advisory](https://github.com/advisories/GHSA-2464-fhr4-w9xw), [Zod advisory](https://github.com/advisories/GHSA-mrhx-c7xc-m3w5).
+- Patched within the existing major versions: **Next.js 16.4.0 → 16.4.5**, **Zod 4.6.5 → 4.6.7**. The lockfile was updated. Application behavior was not changed.
+- After those changes, `npm run typecheck`, all **21** tests, `npm run verify:samples`, `npm run build` and `node scripts/verify-local.mjs` passed. `npm audit --omit=dev --audit-level=high` returned **0 vulnerabilities** at the time of checking. This reports known registry advisories, not an overall security certification.
+- No paid model/provider trial, public hosting, promotional message, purchase or imported-code execution was performed. No new browser/physical-device verification was performed for this dependency-only change; previous browser observations remain historical evidence.
+
+## Remaining verification limits
 
 - The in-app clipboard readback returned an empty value despite the UI write resolving. Clipboard contents were not independently confirmed. The exact URL is exposed in a share field for manual copying, and deep-link navigation was verified. Test native clipboard behavior in a normal browser before release.
 - Only the Codex in-app browser was available through the browser tool; Chrome/Firefox were not connected. No physical phone or cross-browser compatibility matrix was tested. Reduced-motion behavior is implemented in CSS; OS preference emulation was not separately exercised.

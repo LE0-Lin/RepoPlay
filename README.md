@@ -8,6 +8,8 @@ Follow a concrete feature from input to output. Each step connects an explanatio
 
 RepoPlay is the working name of this local v0.1. Domain, package name, and trademark availability have not been checked. Its discovery → shared tour → project interest hypothesis has not been validated with real users or Stars.
 
+**Status: development checkpoint, not a public release.** The three built-in tours all cover AgentConfigScore. Public repository reading and an offline-tested model adapter exist; useful generation for unfamiliar repositories has not been demonstrated with a real provider. The code is backed up in [LE0-Lin/RepoPlay](https://github.com/LE0-Lin/RepoPlay), currently a private progress repository. See [ROADMAP.md](ROADMAP.md) for the remaining release gates.
+
 ![RepoPlay source-guided feature tour](docs/screenshots/tour-desktop.jpg)
 
 Actual local interface captured on 2026-10-07. [Homepage](docs/screenshots/home-desktop.jpg) · [Mobile source panel](docs/screenshots/mobile-source.jpg).
@@ -19,10 +21,13 @@ Additional actual views: [End-of-tour continuation](docs/screenshots/tour-ending
 Requires Node.js **20.9 or newer** and npm. Developed and verified with Node.js 24.11.1 on Windows. Dependencies are recorded in `package-lock.json`.
 
 ```sh
+git clone https://github.com/LE0-Lin/RepoPlay.git repoplay
 cd repoplay
 npm ci
 npm run dev
 ```
+
+Cloning currently requires access to the private repository. If the source is already on your machine, start with `cd repoplay`.
 
 Open [http://127.0.0.1:3000](http://127.0.0.1:3000). For a production preview:
 
@@ -155,6 +160,6 @@ To add a guide, create a Tour JSON and source snapshot, register it in `lib/samp
 
 ## Before a public release
 
-See [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md). This delivery performs no repository creation, push, deployment, public posting or purchase. The GitHub Star button is absent until `NEXT_PUBLIC_REPOPLAY_REPOSITORY` is set to a real RepoPlay repository URL. It never points to the source project.
+See [ROADMAP.md](ROADMAP.md) and [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md). The user authorized a private GitHub progress repository on 2026-11-04; this does not constitute a public product launch. No public website, paid model trial, promotional post or purchase has been made. The GitHub Star button remains disabled until a real, visitor-accessible RepoPlay repository is configured. It never points to the source project.
 
 For a suggested 90-second screen recording, see [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md). It uses the built-in guide and needs no provider configuration.
