@@ -1,0 +1,196 @@
+{
+  "schemaVersion": 1,
+  "repository": {
+    "owner": "LE0-Lin",
+    "name": "AgentConfigScore",
+    "commit": "633ccef39a89ba79592d90a68f5410f57bb8bb53",
+    "license": "MIT · Copyright (c) 2026 Zhibo Lin"
+  },
+  "language": "Python",
+  "dataMode": "illustrative",
+  "provenance": {
+    "kind": "pre-generated",
+    "review": "source-checked",
+    "note": "Pre-generated, source-checked guide. Paths, line ranges and excerpts were checked against the pinned Git objects. Explanations are editorial interpretations; independent human review is still pending. No repository code was executed to create these illustrations."
+  },
+  "id": "auditable-exception",
+  "title": "How an exception reaches the report",
+  "summary": "See how a configured suppression is validated, matched and preserved in the report audit trail.",
+  "feature": "agent-config-score ./my-repo --json",
+  "steps": [
+    {
+      "id": "load",
+      "label": "Load JSON",
+      "title": "Read the exception configuration",
+      "explanation": "The scan calls load_policy before analysis. It reads .agentconfigscore.json from the repository root, parses JSON and forwards the object to parse_policy. Missing configuration uses defaults.",
+      "insight": "Invalid JSON stops the scan before analysis. This illustration assumes a well-formed example file.",
+      "input": {
+        "label": "Config · example",
+        "value": "{ \"version\": 1, \"suppressions\": […] }"
+      },
+      "output": {
+        "label": "Parsed JSON",
+        "value": "configuration object"
+      },
+      "transition": "The configuration object must pass structural validation.",
+      "references": [
+        {
+          "path": "src/agent_config_score/config.py",
+          "startLine": 182,
+          "endLine": 201,
+          "quote": "def load_policy(root: Path) -> Policy:\n    path = root.resolve() / CONFIG_NAME\n    if not path.exists():\n        return Policy()\n    if not path.is_file():\n        raise ConfigError(f\"{CONFIG_NAME} exists but is not a file\")\n\n    try:\n        data = json.loads(path.read_text(encoding=\"utf-8\"))\n    except OSError as exc:\n        raise ConfigError(f\"could not read {CONFIG_NAME}: {exc}\") from exc\n    except json.JSONDecodeError as exc:\n        raise ConfigError(\n            f\"invalid JSON in {CONFIG_NAME} at line {exc.lineno}, column {exc.colno}: {exc.msg}\"\n        ) from exc\n\n    try:\n        return parse_policy(data)\n    except ConfigError as exc:\n        raise ConfigError(f\"invalid {CONFIG_NAME}: {exc}\") from exc"
+        },
+        {
+          "path": "src/agent_config_score/cli.py",
+          "startLine": 435,
+          "endLine": 439,
+          "quote": "    try:\n        policy = load_policy(root)\n    except ConfigError as exc:\n        print(f\"error: {exc}\", file=sys.stderr)\n        return 2"
+        }
+      ]
+    },
+    {
+      "id": "shape",
+      "label": "Validate shape",
+      "title": "Reject unknown configuration keys",
+      "explanation": "parse_policy requires a JSON object, rejects unknown top-level keys and accepts version 1. It also checks that policy is an object and rejects unknown policy fields.",
+      "insight": "A misspelled key does not silently create an exception or weaken a threshold.",
+      "input": {
+        "label": "Config keys",
+        "value": "version, policy, suppressions"
+      },
+      "output": {
+        "label": "Allowed structure",
+        "value": "version = 1\npolicy is an object"
+      },
+      "transition": "Threshold values are validated next.",
+      "references": [
+        {
+          "path": "src/agent_config_score/config.py",
+          "startLine": 127,
+          "endLine": 149,
+          "quote": "def parse_policy(data: object, *, today: date | None = None) -> Policy:\n    if not isinstance(data, dict):\n        raise ConfigError(\"configuration root must be a JSON object\")\n\n    unknown = sorted(set(data) - _ALLOWED_TOP_LEVEL)\n    if unknown:\n        raise ConfigError(f\"unknown configuration key(s): {', '.join(unknown)}\")\n\n    schema_uri = data.get(\"$schema\")\n    if schema_uri is not None and (not isinstance(schema_uri, str) or not schema_uri.strip()):\n        raise ConfigError(\"$schema must be a non-empty string when provided\")\n\n    version = data.get(\"version\", 1)\n    if version != 1:\n        raise ConfigError(\"version must be 1\")\n\n    raw_policy = data.get(\"policy\", {})\n    if not isinstance(raw_policy, dict):\n        raise ConfigError(\"policy must be a JSON object\")\n\n    unknown_policy = sorted(set(raw_policy) - _ALLOWED_POLICY_KEYS)\n    if unknown_policy:\n        raise ConfigError(f\"unknown policy key(s): {', '.join(unknown_policy)}\")"
+        }
+      ]
+    },
+    {
+      "id": "thresholds",
+      "label": "Thresholds",
+      "title": "Validate values before exceptions",
+      "explanation": "The parser checks max_drop, fail_on_new_errors and the optional fail_under floor. The helper rejects booleans used as integers and checks bounds. suppressions must be an array.",
+      "insight": "A scan score floor must be an integer from 0 to 100. These validations precede creation of the Policy.",
+      "input": {
+        "label": "Policy · example",
+        "value": "{ \"fail_under\": 80 }"
+      },
+      "output": {
+        "label": "Validated values",
+        "value": "fail_under = 80\nsuppressions is an array"
+      },
+      "transition": "Each suppression entry is validated individually.",
+      "references": [
+        {
+          "path": "src/agent_config_score/config.py",
+          "startLine": 151,
+          "endLine": 168,
+          "quote": "    max_drop = _require_int(\"policy.max_drop\", raw_policy.get(\"max_drop\", 0), minimum=0)\n\n    fail_on_new_errors = raw_policy.get(\"fail_on_new_errors\", False)\n    if not isinstance(fail_on_new_errors, bool):\n        raise ConfigError(\"policy.fail_on_new_errors must be true or false\")\n\n    fail_under = raw_policy.get(\"fail_under\")\n    if fail_under is not None:\n        fail_under = _require_int(\"policy.fail_under\", fail_under, minimum=0, maximum=100)\n\n    raw_suppressions = data.get(\"suppressions\", [])\n    if not isinstance(raw_suppressions, list):\n        raise ConfigError(\"suppressions must be a JSON array\")\n    evaluation_date = _utc_today() if today is None else today\n    suppressions = tuple(\n        _parse_suppression(raw, index, today=evaluation_date)\n        for index, raw in enumerate(raw_suppressions)\n    )"
+        },
+        {
+          "path": "src/agent_config_score/config.py",
+          "startLine": 63,
+          "endLine": 70,
+          "quote": "def _require_int(name: str, value, *, minimum: int, maximum: int | None = None) -> int:\n    if isinstance(value, bool) or not isinstance(value, int):\n        raise ConfigError(f\"{name} must be an integer\")\n    if value < minimum or (maximum is not None and value > maximum):\n        if maximum is None:\n            raise ConfigError(f\"{name} must be >= {minimum}\")\n        raise ConfigError(f\"{name} must be between {minimum} and {maximum}\")\n    return value"
+        }
+      ]
+    },
+    {
+      "id": "exception",
+      "label": "Exception",
+      "title": "Require a known rule, reason and expiry",
+      "explanation": "A suppression must name an existing catalog rule and provide a non-empty reason limited to 500 characters. Its expiry must be a canonical ISO date and cannot be earlier than the evaluation date. Optional paths are validated separately.",
+      "insight": "Expiration uses the evaluation date. The sample exception is hypothetical, not a recorded active policy.",
+      "input": {
+        "label": "Suppression · example",
+        "value": "rule: dead-path\nreason: Generated docs\nexpires: 2099-12-31\npaths: [docs/**]"
+      },
+      "output": {
+        "label": "Validated suppression",
+        "value": "known rule + reason + unexpired date\noptional path scope"
+      },
+      "transition": "The resulting Policy passes its suppressions to analyze.",
+      "references": [
+        {
+          "path": "src/agent_config_score/config.py",
+          "startLine": 82,
+          "endLine": 108,
+          "quote": "    rule = raw.get(\"rule\")\n    if not isinstance(rule, str) or not rule.strip():\n        raise ConfigError(f\"{name}.rule must be a non-empty string\")\n    rule = rule.strip()\n    if get_rule(rule) is None:\n        raise ConfigError(f\"{name}.rule references unknown rule ID: {rule}\")\n\n    reason = raw.get(\"reason\")\n    if not isinstance(reason, str) or not reason.strip():\n        raise ConfigError(f\"{name}.reason must be a non-empty string\")\n    reason = reason.strip()\n    if len(reason) > 500:\n        raise ConfigError(f\"{name}.reason must be at most 500 characters\")\n\n    expires_raw = raw.get(\"expires\")\n    if not isinstance(expires_raw, str):\n        raise ConfigError(f\"{name}.expires must be an ISO date (YYYY-MM-DD)\")\n    try:\n        expires = date.fromisoformat(expires_raw)\n    except ValueError as exc:\n        raise ConfigError(f\"{name}.expires must be an ISO date (YYYY-MM-DD)\") from exc\n    if expires.isoformat() != expires_raw:\n        raise ConfigError(f\"{name}.expires must use YYYY-MM-DD format\")\n    if expires < today:\n        raise ConfigError(\n            f\"{name} expired on {expires.isoformat()}; remove it or renew it with a reviewed reason\"\n        )"
+        },
+        {
+          "path": "src/agent_config_score/config.py",
+          "startLine": 110,
+          "endLine": 124,
+          "quote": "    raw_paths = raw.get(\"paths\")\n    paths: tuple[str, ...] = ()\n    if raw_paths is not None:\n        if not isinstance(raw_paths, list) or not raw_paths:\n            raise ConfigError(f\"{name}.paths must be a non-empty JSON array when provided\")\n        normalized: list[str] = []\n        for path_index, value in enumerate(raw_paths):\n            if not isinstance(value, str) or not value.strip():\n                raise ConfigError(f\"{name}.paths[{path_index}] must be a non-empty string\")\n            normalized.append(value.strip())\n        if len(set(normalized)) != len(normalized):\n            raise ConfigError(f\"{name}.paths must not contain duplicates\")\n        paths = tuple(normalized)\n\n    return Suppression(rule=rule, reason=reason, expires=expires, paths=paths)"
+        },
+        {
+          "path": "src/agent_config_score/cli.py",
+          "startLine": 446,
+          "endLine": 446,
+          "quote": "    report = analyze(root, suppressions=policy.suppressions)"
+        }
+      ]
+    },
+    {
+      "id": "audit",
+      "label": "Keep audit",
+      "title": "Exclude the penalty, preserve the finding",
+      "explanation": "The scanner matches the rule ID and optional path scope. A matching finding moves into suppressed_findings; an unmatched finding remains active. Only active findings enter scoring, while Report.to_dict retains both lists.",
+      "insight": "Path-scoped suppressions do not apply to repository-level findings. Suppressed does not mean deleted from the report.",
+      "input": {
+        "label": "Finding · example",
+        "value": "dead-path in docs/AGENTS.md"
+      },
+      "output": {
+        "label": "Report · schematic",
+        "value": "findings: active findings\nsuppressed_findings: finding + reason + expiry"
+      },
+      "transition": "The JSON report keeps the suppression audit trail visible.",
+      "references": [
+        {
+          "path": "src/agent_config_score/config.py",
+          "startLine": 26,
+          "endLine": 33,
+          "quote": "    def applies_to(self, rule: str, file: str) -> bool:\n        if self.rule != rule:\n            return False\n        if not self.paths:\n            return True\n        if file == \"(repo)\":\n            return False\n        return any(fnmatch(file, pattern) for pattern in self.paths)"
+        },
+        {
+          "path": "src/agent_config_score/scanner.py",
+          "startLine": 950,
+          "endLine": 968,
+          "quote": "    active_findings: list[Finding] = []\n    suppressed_findings: list[SuppressedFinding] = []\n    for finding in findings:\n        suppression = _matching_suppression(finding, suppressions)\n        if suppression is None:\n            active_findings.append(finding)\n        else:\n            suppressed_findings.append(SuppressedFinding(finding=finding, suppression=suppression))\n    findings = active_findings\n\n    used = Counter()\n    penalty = 0\n    for finding in findings:\n        rule = RULES_BY_CODE.get(finding.code)\n        category = rule.category if rule is not None else \"other\"\n        cap = CATEGORY_CAPS.get(category, CATEGORY_CAPS[\"other\"])\n        applied = min(finding.penalty, max(0, cap - used[category]))\n        used[category] += applied\n        penalty += applied"
+        },
+        {
+          "path": "src/agent_config_score/scanner.py",
+          "startLine": 395,
+          "endLine": 405,
+          "quote": "    def to_dict(self) -> dict:\n        return {\n            \"root\": self.root,\n            \"files\": self.files,\n            \"score\": self.score,\n            \"grade\": self.grade,\n            \"estimated_tokens\": self.estimated_tokens,\n            \"duplicate_ratio\": round(self.duplicate_ratio, 4),\n            \"findings\": [f.to_dict() for f in self.findings],\n            \"suppressed_findings\": [item.to_dict() for item in self.suppressed_findings],\n        }"
+        }
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "from": "load",
+      "to": "shape"
+    },
+    {
+      "from": "shape",
+      "to": "thresholds"
+    },
+    {
+      "from": "thresholds",
+      "to": "exception"
+    },
+    {
+      "from": "exception",
+      "to": "audit"
+    }
+  ]
+}

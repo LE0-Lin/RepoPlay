@@ -1,0 +1,284 @@
+{
+  "schemaVersion": 1,
+  "repository": {
+    "owner": "LE0-Lin",
+    "name": "AgentConfigScore",
+    "commit": "633ccef39a89ba79592d90a68f5410f57bb8bb53",
+    "license": "MIT · Copyright (c) 2026 Zhibo Lin"
+  },
+  "language": "Python",
+  "dataMode": "illustrative",
+  "provenance": {
+    "kind": "pre-generated",
+    "review": "source-checked",
+    "note": "Pre-generated, source-checked guide. Paths, line ranges and excerpts were checked against the pinned Git objects. Explanations are editorial interpretations; independent human review is still pending. No repository code was executed to create these illustrations."
+  },
+  "id": "scan-to-report",
+  "title": "From command to code audit",
+  "summary": "Follow a scan from the command line to instruction discovery, rule matching, scoring and a JSON report.",
+  "feature": "agent-config-score ./my-repo --json",
+  "steps": [
+    {
+      "id": "command",
+      "label": "Command",
+      "title": "Start with one command",
+      "explanation": "A path and output flag enter the scan parser. The path defaults to the current directory; --json selects machine-readable output. The scan entry point rejects a path that is not a directory before loading any policy.",
+      "insight": "The command chooses the output format. It does not change how findings are detected.",
+      "input": {
+        "label": "Terminal",
+        "value": "agent-config-score ./my-repo --json"
+      },
+      "output": {
+        "label": "Parsed arguments",
+        "value": "path = ./my-repo\njson = true"
+      },
+      "transition": "The validated directory becomes the policy lookup root.",
+      "references": [
+        {
+          "path": "src/agent_config_score/cli.py",
+          "startLine": 127,
+          "endLine": 135,
+          "quote": "def build_scan_parser() -> argparse.ArgumentParser:\n    p = argparse.ArgumentParser(prog=\"agent-config-score\", description=\"Score and audit coding-agent instruction files.\")\n    p.add_argument(\"path\", nargs=\"?\", default=\".\", help=\"Repository path (default: current directory)\")\n    p.add_argument(\"--json\", action=\"store_true\", help=\"Print JSON instead of text\")\n    p.add_argument(\"--html\", metavar=\"FILE\", help=\"Write a self-contained HTML report\")\n    p.add_argument(\"--badge\", metavar=\"FILE\", help=\"Write an SVG score badge\")\n    p.add_argument(\"--sarif\", metavar=\"FILE\", help=\"Write a SARIF 2.1.0 report for GitHub code scanning\")\n    p.add_argument(\"--fail-under\", type=int, default=None, metavar=\"N\", help=\"Override the repository policy score floor\")\n    return p"
+        },
+        {
+          "path": "src/agent_config_score/cli.py",
+          "startLine": 428,
+          "endLine": 439,
+          "quote": "def _main_scan(argv: list[str]) -> int:\n    args = build_scan_parser().parse_args(argv)\n    root = Path(args.path)\n    if not root.exists() or not root.is_dir():\n        print(f\"error: not a directory: {root}\", file=sys.stderr)\n        return 2\n\n    try:\n        policy = load_policy(root)\n    except ConfigError as exc:\n        print(f\"error: {exc}\", file=sys.stderr)\n        return 2"
+        }
+      ]
+    },
+    {
+      "id": "policy",
+      "label": "Policy",
+      "title": "Load the repository policy",
+      "explanation": "load_policy looks for .agentconfigscore.json under the repository root. If it is absent, a default Policy is returned. If it is present, the file is parsed and validated. Configuration errors stop the command with exit code 2.",
+      "insight": "The --fail-under CLI flag can override the policy floor. The configured suppressions are passed into analysis.",
+      "input": {
+        "label": "Repository root",
+        "value": "./my-repo/.agentconfigscore.json"
+      },
+      "output": {
+        "label": "Policy · example",
+        "value": "fail_under = 80\nsuppressions = ()"
+      },
+      "transition": "analyze receives the root and the policy suppressions.",
+      "references": [
+        {
+          "path": "src/agent_config_score/config.py",
+          "startLine": 182,
+          "endLine": 199,
+          "quote": "def load_policy(root: Path) -> Policy:\n    path = root.resolve() / CONFIG_NAME\n    if not path.exists():\n        return Policy()\n    if not path.is_file():\n        raise ConfigError(f\"{CONFIG_NAME} exists but is not a file\")\n\n    try:\n        data = json.loads(path.read_text(encoding=\"utf-8\"))\n    except OSError as exc:\n        raise ConfigError(f\"could not read {CONFIG_NAME}: {exc}\") from exc\n    except json.JSONDecodeError as exc:\n        raise ConfigError(\n            f\"invalid JSON in {CONFIG_NAME} at line {exc.lineno}, column {exc.colno}: {exc.msg}\"\n        ) from exc\n\n    try:\n        return parse_policy(data)"
+        },
+        {
+          "path": "src/agent_config_score/cli.py",
+          "startLine": 441,
+          "endLine": 446,
+          "quote": "    fail_under = policy.fail_under if args.fail_under is None else args.fail_under\n    if fail_under is not None and not 0 <= fail_under <= 100:\n        print(\"error: --fail-under must be between 0 and 100\", file=sys.stderr)\n        return 2\n\n    report = analyze(root, suppressions=policy.suppressions)"
+        }
+      ]
+    },
+    {
+      "id": "discover",
+      "label": "Discover",
+      "title": "Find the instruction files",
+      "explanation": "Discovery walks the repository, ignores excluded paths, and keeps supported instruction files. It recognizes AGENTS.md and other known names, plus Markdown rules in supported tool directories. Results are sorted by relative path.",
+      "insight": "This is a targeted instruction audit: it does not scan every source file as an instruction.",
+      "input": {
+        "label": "Repository · example",
+        "value": "my-repo/\n  AGENTS.md\n  src/main.py\n  .cursor/rules/style.mdc"
+      },
+      "output": {
+        "label": "Selected files · example",
+        "value": "AGENTS.md\n.cursor/rules/style.mdc"
+      },
+      "transition": "Only the selected instruction files enter the reading loop.",
+      "references": [
+        {
+          "path": "src/agent_config_score/scanner.py",
+          "startLine": 452,
+          "endLine": 472,
+          "quote": "    root = root.absolute()\n    patterns = _ignore_patterns(root)\n    found: dict[str, Path] = {}\n    for path in root.rglob(\"*\"):\n        rel_path = path.relative_to(root)\n        rel = rel_path.as_posix()\n        if any(part in SKIP_DIRS for part in rel_path.parts) or _ignored(rel, patterns):\n            continue\n        if not path.is_file():\n            continue\n        if path.name.casefold() in TARGET_NAMES_CASEFOLD:\n            key = rel.casefold()\n            current = found.get(key)\n            if current is None or _prefer_canonical_name(path, current):\n                found[key] = path\n        elif rel.startswith((\".cursor/rules/\", \".claude/\", \".github/instructions/\")) and path.suffix.lower() in {\".md\", \".mdc\"}:\n            key = rel.casefold()\n            current = found.get(key)\n            if current is None or _prefer_canonical_name(path, current):\n                found[key] = path\n    return sorted(found.values(), key=lambda p: p.relative_to(root).as_posix())"
+        }
+      ]
+    },
+    {
+      "id": "read",
+      "label": "Read",
+      "title": "Turn files into analysis context",
+      "explanation": "Each discovered file is read as UTF-8 with replacement for decoding errors. The scanner stores its text, builds instruction context and estimates its token size. A read error becomes a finding; an empty instruction file gets its own error.",
+      "insight": "The token count is an estimate, not a tokenizer measurement or a runtime model cost.",
+      "input": {
+        "label": "Instruction text · example",
+        "value": "AGENTS.md\n“Use sudo to install the tool.”"
+      },
+      "output": {
+        "label": "Analysis state · example",
+        "value": "texts[path] = instruction text\ncontext = parsed instruction context\ntotal_tokens += estimated tokens"
+      },
+      "transition": "The original text and its context feed deterministic checks.",
+      "references": [
+        {
+          "path": "src/agent_config_score/scanner.py",
+          "startLine": 847,
+          "endLine": 863,
+          "quote": "    for path in files:\n        rel = path.relative_to(root).as_posix()\n        try:\n            text = path.read_text(encoding=\"utf-8\", errors=\"replace\")\n        except OSError as exc:\n            findings.append(_finding(\"read-error\", rel, message=str(exc)))\n            continue\n        texts[path] = text\n        context = _instruction_context(text)\n        if not text.strip():\n            findings.append(_finding(\"empty-instructions\", rel))\n        tokens = estimate_tokens(text)\n        total_tokens += tokens\n        if tokens > 8000:\n            findings.append(_finding(\"context-too-large\", rel, message=f\"Estimated {tokens:,} tokens; large persistent instructions waste context\"))\n        elif tokens > 5000:\n            findings.append(_finding(\"context-large\", rel, message=f\"Estimated {tokens:,} tokens; consider trimming persistent instructions\"))"
+        }
+      ]
+    },
+    {
+      "id": "match",
+      "label": "Match rules",
+      "title": "Match a rule, keep its source location",
+      "explanation": "Pattern rules search the text. Some command rules parse options; dangerous-command matches are skipped when the surrounding context prohibits the command. An accepted match becomes a finding with the rule ID, relative file path and line number.",
+      "insight": "A match is a deterministic review signal. It does not prove that a command ran or that an instruction is malicious.",
+      "input": {
+        "label": "Candidate · example",
+        "value": "rule = sudo\nfile = AGENTS.md\nline = 1"
+      },
+      "output": {
+        "label": "Finding · example",
+        "value": "severity: warning\ncategory: danger\npenalty: 6"
+      },
+      "transition": "After other repository checks and suppression handling, active findings reach scoring.",
+      "references": [
+        {
+          "path": "src/agent_config_score/scanner.py",
+          "startLine": 865,
+          "endLine": 887,
+          "quote": "        for pattern_rule in PATTERN_RULES:\n            for match in pattern_rule.pattern.finditer(text):\n                command = match.group(0).lstrip()\n                # Some patterns include a leading whitespace boundary (sudo).\n                # Locate the actual token, not the previous line's newline.\n                index = match.end() - len(command)\n                if pattern_rule.rule.code in PARSED_COMMAND_RULES:\n                    risky, command = _command_options(\n                        pattern_rule.rule.code, _command_words(text, index)\n                    )\n                    if not risky:\n                        continue\n                if (\n                    pattern_rule.rule.code == \"prompt-injection-override\"\n                    and _quoted_injection_example(text, match.start(), match.group(0))\n                ):\n                    continue\n                if (\n                    pattern_rule.rule.category == \"danger\"\n                    and _dangerous_command_is_prohibited(text, index, command, context)\n                ):\n                    continue\n                findings.append(_finding(pattern_rule.rule.code, rel, _line(text, index)))"
+        },
+        {
+          "path": "src/agent_config_score/rules.py",
+          "startLine": 41,
+          "endLine": 41,
+          "quote": "    Rule(\"sudo\", \"warning\", \"danger\", 6, \"Privileged command in persistent agent instructions\", \"Flags instructions that encourage an agent to execute commands with elevated privileges.\"),"
+        },
+        {
+          "path": "src/agent_config_score/scanner.py",
+          "startLine": 950,
+          "endLine": 958,
+          "quote": "    active_findings: list[Finding] = []\n    suppressed_findings: list[SuppressedFinding] = []\n    for finding in findings:\n        suppression = _matching_suppression(finding, suppressions)\n        if suppression is None:\n            active_findings.append(finding)\n        else:\n            suppressed_findings.append(SuppressedFinding(finding=finding, suppression=suppression))\n    findings = active_findings"
+        }
+      ]
+    },
+    {
+      "id": "score",
+      "label": "Score",
+      "title": "Apply penalties within category caps",
+      "explanation": "The scanner groups penalties by category and applies only the remaining capacity in each cap. It subtracts the applied penalties from 100. If any active finding is an error, the score is capped at 89; then the score determines the grade.",
+      "insight": "For the simplified one-warning illustration, 100 − 6 = 94 (A). This is arithmetic for an example, not a measured result for a repository.",
+      "input": {
+        "label": "Active findings · example",
+        "value": "one sudo warning\npenalty = 6; danger cap = 35"
+      },
+      "output": {
+        "label": "Score · example",
+        "value": "applied = min(6, 35) = 6\nscore = 94\ngrade = A"
+      },
+      "transition": "The Report bundles score, grade, findings and suppression audit data.",
+      "references": [
+        {
+          "path": "src/agent_config_score/scanner.py",
+          "startLine": 960,
+          "endLine": 978,
+          "quote": "    used = Counter()\n    penalty = 0\n    for finding in findings:\n        rule = RULES_BY_CODE.get(finding.code)\n        category = rule.category if rule is not None else \"other\"\n        cap = CATEGORY_CAPS.get(category, CATEGORY_CAPS[\"other\"])\n        applied = min(finding.penalty, max(0, cap - used[category]))\n        used[category] += applied\n        penalty += applied\n\n    score = max(0, 100 - penalty)\n    if any(finding.severity == \"error\" for finding in findings):\n        score = min(score, 89)\n    grade = \"A\" if score >= 90 else \"B\" if score >= 80 else \"C\" if score >= 70 else \"D\" if score >= 60 else \"F\"\n    order = {\"error\": 0, \"warning\": 1, \"info\": 2}\n    return Report(\n        root=str(root), files=rels, score=score, grade=grade,\n        estimated_tokens=total_tokens, duplicate_ratio=duplicate_ratio,\n        findings=sorted(findings, key=lambda f: (order.get(f.severity, 3), f.file, f.line or 0)),"
+        },
+        {
+          "path": "src/agent_config_score/rules.py",
+          "startLine": 27,
+          "endLine": 35,
+          "quote": "CATEGORY_CAPS = {\n    \"secret\": 35,\n    \"danger\": 35,\n    \"dead\": 18,\n    \"size\": 18,\n    \"quality\": 30,\n    \"coverage\": 30,\n    \"other\": 15,\n}"
+        }
+      ]
+    },
+    {
+      "id": "report",
+      "label": "Report",
+      "title": "Choose an output, then return an exit code",
+      "explanation": "The same Report is serialized to JSON or printed for people. Optional HTML, badge and SARIF files are written earlier in this function. After output, the command returns 1 when the score is below the selected floor, otherwise 0.",
+      "insight": "A finding does not by itself make a normal scan return 1. This scan path uses the score floor; regression commands have their own gate.",
+      "input": {
+        "label": "Report · example",
+        "value": "score: 94\ngrade: A\nfail_under: 80"
+      },
+      "output": {
+        "label": "JSON · schematic",
+        "value": "{ \"score\": 94, \"grade\": \"A\", … }\nexit code: 0"
+      },
+      "transition": "End of the scan path. Follow another feature from the tour library.",
+      "references": [
+        {
+          "path": "src/agent_config_score/cli.py",
+          "startLine": 461,
+          "endLine": 474,
+          "quote": "    if args.json:\n        print(json.dumps(report.to_dict(), indent=2, ensure_ascii=False))\n    else:\n        print_report(report)\n        if args.html:\n            print(f\"\\nHTML report: {Path(args.html).resolve()}\")\n        if args.badge:\n            print(f\"Badge: {Path(args.badge).resolve()}\")\n        if args.sarif:\n            print(f\"SARIF report: {Path(args.sarif).resolve()}\")\n\n    if fail_under is not None and report.score < fail_under:\n        return 1\n    return 0"
+        },
+        {
+          "path": "src/agent_config_score/scanner.py",
+          "startLine": 395,
+          "endLine": 405,
+          "quote": "    def to_dict(self) -> dict:\n        return {\n            \"root\": self.root,\n            \"files\": self.files,\n            \"score\": self.score,\n            \"grade\": self.grade,\n            \"estimated_tokens\": self.estimated_tokens,\n            \"duplicate_ratio\": round(self.duplicate_ratio, 4),\n            \"findings\": [f.to_dict() for f in self.findings],\n            \"suppressed_findings\": [item.to_dict() for item in self.suppressed_findings],\n        }"
+        }
+      ],
+      "branches": [
+        {
+          "id": "json",
+          "label": "--json",
+          "explanation": "With --json, the report dictionary is serialized with json.dumps.",
+          "output": {
+            "label": "JSON · schematic",
+            "value": "{ \"score\": 94, \"grade\": \"A\", … }\nexit code: 0"
+          },
+          "reference": {
+            "path": "src/agent_config_score/cli.py",
+            "startLine": 461,
+            "endLine": 462,
+            "quote": "    if args.json:\n        print(json.dumps(report.to_dict(), indent=2, ensure_ascii=False))"
+          }
+        },
+        {
+          "id": "terminal",
+          "label": "Terminal",
+          "explanation": "Without --json, print_report renders the same report for the terminal.",
+          "output": {
+            "label": "Terminal · schematic",
+            "value": "AgentConfigScore  A  94/100\nWARNING  sudo\nexit code: 0"
+          },
+          "reference": {
+            "path": "src/agent_config_score/cli.py",
+            "startLine": 463,
+            "endLine": 464,
+            "quote": "    else:\n        print_report(report)"
+          }
+        }
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "from": "command",
+      "to": "policy"
+    },
+    {
+      "from": "policy",
+      "to": "discover"
+    },
+    {
+      "from": "discover",
+      "to": "read"
+    },
+    {
+      "from": "read",
+      "to": "match"
+    },
+    {
+      "from": "match",
+      "to": "score"
+    },
+    {
+      "from": "score",
+      "to": "report"
+    }
+  ]
+}

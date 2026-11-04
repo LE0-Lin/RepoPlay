@@ -1,0 +1,184 @@
+{
+  "schemaVersion": 1,
+  "repository": {
+    "owner": "LE0-Lin",
+    "name": "AgentConfigScore",
+    "commit": "633ccef39a89ba79592d90a68f5410f57bb8bb53",
+    "license": "MIT · Copyright (c) 2026 Zhibo Lin"
+  },
+  "language": "Python",
+  "dataMode": "illustrative",
+  "provenance": {
+    "kind": "pre-generated",
+    "review": "source-checked",
+    "note": "Pre-generated, source-checked guide. Paths, line ranges and excerpts were checked against the pinned Git objects. Explanations are editorial interpretations; independent human review is still pending. No repository code was executed to create these illustrations."
+  },
+  "id": "rule-lookup",
+  "title": "Look up a rule by ID",
+  "summary": "Follow one rule ID through command dispatch, catalog lookup and a readable explanation.",
+  "feature": "agent-config-score rules curl-pipe-shell",
+  "steps": [
+    {
+      "id": "dispatch",
+      "label": "Dispatch",
+      "title": "Route the rules command",
+      "explanation": "The top-level entry point sees rules as the first argument and hands the remaining arguments to _main_rules. The normal scan path is bypassed.",
+      "insight": "A catalog lookup does not read or scan repository instruction files.",
+      "input": {
+        "label": "Terminal",
+        "value": "agent-config-score rules curl-pipe-shell"
+      },
+      "output": {
+        "label": "Command arguments",
+        "value": "[\"curl-pipe-shell\"]"
+      },
+      "transition": "The rules parser receives just the command arguments.",
+      "references": [
+        {
+          "path": "src/agent_config_score/cli.py",
+          "startLine": 485,
+          "endLine": 488,
+          "quote": "    if args and args[0] == \"init\":\n        return _main_init(args[1:])\n    if args and args[0] == \"rules\":\n        return _main_rules(args[1:])"
+        }
+      ]
+    },
+    {
+      "id": "parse",
+      "label": "Parse",
+      "title": "Read the optional rule ID",
+      "explanation": "The rules parser accepts an optional rule_id and a --json flag. Supplying an ID selects a single-rule path; omitting it selects the full catalog.",
+      "insight": "This guide follows one ID. The list-all path uses the same Rule objects.",
+      "input": {
+        "label": "Arguments",
+        "value": "curl-pipe-shell"
+      },
+      "output": {
+        "label": "Parsed values",
+        "value": "rule_id = curl-pipe-shell\njson = false"
+      },
+      "transition": "_main_rules uses the parsed ID for a catalog lookup.",
+      "references": [
+        {
+          "path": "src/agent_config_score/cli.py",
+          "startLine": 150,
+          "endLine": 157,
+          "quote": "def build_rules_parser() -> argparse.ArgumentParser:\n    p = argparse.ArgumentParser(\n        prog=\"agent-config-score rules\",\n        description=\"List all stable rule IDs or explain one rule in detail.\",\n    )\n    p.add_argument(\"rule_id\", nargs=\"?\", help=\"Optional rule ID, for example: curl-pipe-shell\")\n    p.add_argument(\"--json\", action=\"store_true\", help=\"Print machine-readable JSON\")\n    return p"
+        },
+        {
+          "path": "src/agent_config_score/cli.py",
+          "startLine": 276,
+          "endLine": 279,
+          "quote": "def _main_rules(argv: list[str]) -> int:\n    args = build_rules_parser().parse_args(argv)\n    if args.rule_id:\n        rule = get_rule(args.rule_id)"
+        }
+      ]
+    },
+    {
+      "id": "lookup",
+      "label": "Lookup",
+      "title": "Find the canonical rule",
+      "explanation": "RULES_BY_CODE maps each unique rule ID to a Rule. get_rule uses a dictionary lookup and returns None if the ID is unknown. The curl-pipe-shell definition supplies severity, category, penalty and description.",
+      "insight": "The scanner and this explanation command share the same catalog entry.",
+      "input": {
+        "label": "Lookup key",
+        "value": "curl-pipe-shell"
+      },
+      "output": {
+        "label": "Rule metadata",
+        "value": "severity = error\ncategory = danger\npenalty = 18"
+      },
+      "transition": "The caller checks whether a matching Rule exists.",
+      "references": [
+        {
+          "path": "src/agent_config_score/rules.py",
+          "startLine": 98,
+          "endLine": 99,
+          "quote": "def get_rule(code: str) -> Rule | None:\n    return RULES_BY_CODE.get(code)"
+        },
+        {
+          "path": "src/agent_config_score/rules.py",
+          "startLine": 37,
+          "endLine": 38,
+          "quote": "RULES = (\n    Rule(\"curl-pipe-shell\", \"error\", \"danger\", 18, \"Remote script piped directly to a shell\", \"Flags persistent instructions that pipe curl output directly into sh or bash.\"),"
+        },
+        {
+          "path": "src/agent_config_score/rules.py",
+          "startLine": 68,
+          "endLine": 77,
+          "quote": "RULES_BY_CODE = {rule.code: rule for rule in RULES}\n\nif len(RULES_BY_CODE) != len(RULES):\n    raise RuntimeError(\"AgentConfigScore rule IDs must be unique\")\n\nif any(rule.category not in CATEGORY_CAPS for rule in RULES):\n    raise RuntimeError(\"Every AgentConfigScore rule must use a known scoring category\")\n\nif any(rule.severity not in {\"error\", \"warning\", \"info\"} for rule in RULES):\n    raise RuntimeError(\"Every AgentConfigScore rule must use a known severity\")"
+        }
+      ]
+    },
+    {
+      "id": "guard",
+      "label": "Check ID",
+      "title": "Handle an unknown ID explicitly",
+      "explanation": "When the catalog returns None, the command prints an error to stderr and returns 2. With a known ID, it continues to the selected output format.",
+      "insight": "An unknown ID does not turn into an empty successful explanation.",
+      "input": {
+        "label": "Lookup result · example",
+        "value": "Rule(code=\"curl-pipe-shell\", …)"
+      },
+      "output": {
+        "label": "Chosen path · example",
+        "value": "Rule found → continue\nUnknown rule → stderr and exit 2"
+      },
+      "transition": "A known Rule can now be serialized or printed.",
+      "references": [
+        {
+          "path": "src/agent_config_score/cli.py",
+          "startLine": 278,
+          "endLine": 285,
+          "quote": "    if args.rule_id:\n        rule = get_rule(args.rule_id)\n        if rule is None:\n            print(f\"error: unknown rule ID: {args.rule_id}\", file=sys.stderr)\n            return 2\n        if args.json:\n            print(json.dumps(rule.to_dict(), indent=2, ensure_ascii=False))\n        else:"
+        }
+      ]
+    },
+    {
+      "id": "explain",
+      "label": "Explain",
+      "title": "Print the rule, then finish",
+      "explanation": "Without --json, the command prints the ID, severity, category, penalty, summary and description. With --json, it serializes the Rule dictionary. Both known-rule paths return 0.",
+      "insight": "Penalty 18 is catalog metadata here. This command does not calculate a repository score.",
+      "input": {
+        "label": "Known rule",
+        "value": "curl-pipe-shell"
+      },
+      "output": {
+        "label": "Terminal · schematic",
+        "value": "curl-pipe-shell\nSeverity: error\nCategory: danger\nPenalty: 18\nexit code: 0"
+      },
+      "transition": "End of the single-rule explanation path.",
+      "references": [
+        {
+          "path": "src/agent_config_score/cli.py",
+          "startLine": 283,
+          "endLine": 292,
+          "quote": "        if args.json:\n            print(json.dumps(rule.to_dict(), indent=2, ensure_ascii=False))\n        else:\n            print(rule.code)\n            print(f\"Severity: {rule.severity}\")\n            print(f\"Category: {rule.category}\")\n            print(f\"Penalty:  {rule.penalty}\")\n            print(f\"Summary:  {rule.summary}\")\n            print(f\"\\n{rule.description}\")\n        return 0"
+        },
+        {
+          "path": "src/agent_config_score/rules.py",
+          "startLine": 17,
+          "endLine": 18,
+          "quote": "    def to_dict(self) -> dict:\n        return asdict(self)"
+        }
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "from": "dispatch",
+      "to": "parse"
+    },
+    {
+      "from": "parse",
+      "to": "lookup"
+    },
+    {
+      "from": "lookup",
+      "to": "guard"
+    },
+    {
+      "from": "guard",
+      "to": "explain"
+    }
+  ]
+}
