@@ -25,6 +25,8 @@ The next implementation priority is gate 1. Do not spend another iteration on de
 
 ## Commit history
 
+See the [development log](docs/DEVELOPMENT_LOG.md) for the earlier local-development period and the verified timestamps of the first Git checkpoints.
+
 - `eef7f7b`: first actual Git checkpoint of the existing local prototype, created on 2026-11-04. Earlier local work was not under Git; this checkpoint does not fabricate historical commits.
 - `2cd4e23`: patch Next.js and Zod within their existing major versions; audit, 21 tests, type checking, source checks, build and HTTP smoke checks passed afterward.
 - Subsequent changes are recorded as new commits on `main`; use the [commit history](https://github.com/LE0-Lin/RepoPlay/commits/main/) to inspect them.

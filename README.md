@@ -10,6 +10,8 @@ RepoPlay is the working name of this local v0.1. Domain, package name, and trade
 
 **Status: development checkpoint, not a public release.** The three built-in tours all cover AgentConfigScore. Public repository reading and an offline-tested model adapter exist; useful generation for unfamiliar repositories has not been demonstrated with a real provider. The code is backed up in [LE0-Lin/RepoPlay](https://github.com/LE0-Lin/RepoPlay), currently a private progress repository. See [ROADMAP.md](ROADMAP.md) for the remaining release gates.
 
+The [development log](docs/DEVELOPMENT_LOG.md) separates earlier local work from Git history, which starts on 2026-11-04.
+
 ![RepoPlay source-guided feature tour](docs/screenshots/tour-desktop.jpg)
 
 Actual local interface captured on 2026-10-07. [Homepage](docs/screenshots/home-desktop.jpg) · [Mobile source panel](docs/screenshots/mobile-source.jpg).
