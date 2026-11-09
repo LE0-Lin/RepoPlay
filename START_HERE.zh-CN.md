@@ -6,7 +6,7 @@ RepoPlay 是一个可以点击、跳转和分享的源码功能导览网站。�
 
 ## 先用两分钟看实物
 
-服务运行时，打开 [内置演示](http://127.0.0.1:3000/tour/scan-to-report)。它讲的是你的 AgentConfigScore 的一条扫描流程：
+服务运行时，打开 [内置演示](http://127.0.0.1:3000/tour/scan-to-report)。它讲的是 AgentConfigScore 的一条扫描流程：
 
 **输入命令 → 加载配置 → 找到指令文件 → 读取文件 → 匹配规则 → 算分 → 输出报告。**
 
@@ -34,21 +34,23 @@ RepoPlay 是一个可以点击、跳转和分享的源码功能导览网站。�
 
 样例的路径、行号和摘录经过开发代理核对，独立人工审阅仍待完成。源码引用准确，也不能保证所有解释都正确。
 
-网站当前运行在你的电脑上。localhost 链接只有这台电脑能访问。2026-11-04 已按你的授权建立 [RepoPlay 私有进度仓库](https://github.com/LE0-Lin/RepoPlay)，代码和后续提交有了记录。正式给陌生人在线体验，还需要真实的新仓库生成验证、公开访问地址以及发布清单。现在没有公开站点、真实用户反馈或 Star 增长结果。
+这是需要本地启动的源码预览版。[RepoPlay 仓库](https://github.com/LE0-Lin/RepoPlay) 提供代码、启动说明和真实界面截图。localhost 链接只有运行服务的电脑能访问。正式给陌生人在线体验，还需要真实的新仓库生成验证、公开访问地址以及发布清单。现在没有公开站点、真实用户反馈或 Star 增长结果。
 
-按限定小仓库的测试版估算，还需约 **3–5 个有效开发日**，前提是模型配置、少量真实调用预算和公开托管获得授权。配置等待另计，生成质量不达标时会延长。具体以 [ROADMAP.md](ROADMAP.md) 的验收项为准；优先跑通三个无关仓库，而不是继续美化播放器。
+2026-11-04 记录的估算是约 **3–5 个有效开发日**，前提是模型配置、少量真实调用预算和公开托管获得授权。这些前提尚未满足。配置等待另计，生成质量不达标时会延长。具体以 [ROADMAP.md](ROADMAP.md) 的验收项为准；下一步优先跑通三个无关仓库。
 
-RepoPlay 的代码在 `E:\MyOpen\repoplay`。AgentConfigScore 作为被讲解的样例来源保留在独立目录，本次开发没有修改它。
+RepoPlay 与被讲解的 AgentConfigScore 是独立项目。内置源码快照已随 RepoPlay 保存，正常运行无需克隆 AgentConfigScore。
 
 ## 下次怎样启动
 
-依赖与生产构建已准备好时，在 PowerShell 中运行：
+首次启动：
 
 ```powershell
-cd E:\MyOpen\repoplay
-npm start
+git clone https://github.com/LE0-Lin/RepoPlay.git repoplay
+cd repoplay
+npm ci
+npm run dev
 ```
 
-保持终端运行，然后打开 http://127.0.0.1:3000。关闭服务终端后，网站会停止；以后可以用同样的命令重启。
+需要 Node.js 20.9 或更新版本。保持终端运行，然后打开 http://127.0.0.1:3000。关闭服务终端后，网站会停止；以后在 repoplay 目录中用 `npm run dev` 重启。
 
 首次安装、修改代码后的构建和模型配置见 [英文 README](README.md)。发布前剩余事项见 [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md)。

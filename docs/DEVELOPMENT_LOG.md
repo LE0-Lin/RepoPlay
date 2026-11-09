@@ -31,6 +31,12 @@ The separate [LE0-Lin/RepoPlay](https://github.com/LE0-Lin/RepoPlay) repository 
 - Added this log to describe earlier local work without assigning old dates to new commit objects.
 - Preserved the existing commit history. Subsequent code and documentation changes are recorded as new commits when they occur.
 
+## 2026-11-09 — early source preview
+
+- Authorized publishing the existing repository as an early source preview. Public hosting and paid model use remain outside this change.
+- Updated the README and walkthrough for visitors who can clone the project, preserving explicit limits on examples, editorial review and model generation.
+- Reinstalled locked dependencies and repeated type checking, 21 tests, three sample checks, build, production audit and local HTTP verification. Reviewed reachable history for credential signatures and rechecked pinned upstream snapshots and license text. Results and limitations are in the [verification record](VERIFICATION.md).
+
 ## About older commit dates
 
 Existing local Git commits can be pushed later while retaining their stored metadata. If old commits or snapshots were never created or saved, the current working tree does not reconstruct that history. Git timestamps can be edited, so a date by itself is not evidence of an earlier code version. GitHub also distinguishes author dates from committer dates; see the [official timestamp reference](https://docs.github.com/en/account-and-profile/reference/profile-contributions-reference#how-github-uses-the-git-author-date-and-commit-date).

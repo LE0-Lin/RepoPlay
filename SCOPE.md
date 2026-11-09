@@ -6,4 +6,4 @@ The initial local scope delivered three short, editorially source-checked tours 
 
 Use plain CSS, system fonts, bounded GitHub reads, server-side replaceable model adapter, local JSON import/export. New generation is disabled until project-specific environment variables are configured. Local imports cannot establish upstream provenance and are labeled accordingly.
 
-On 2026-11-04 the user authorized saving progress to GitHub. A separate private repository, `LE0-Lin/RepoPlay`, now contains the local code and real commit history. Public hosting/visibility, paid model trials, naming clearance, real-user validation and independent human review remain release work. See `ROADMAP.md`; a working sample player is a prototype checkpoint, not completion of the end-to-end product goal.
+On 2026-11-04 the code was saved to the separate private repository `LE0-Lin/RepoPlay` with real commit history. On 2026-11-09 source publication was authorized as an early preview. Public hosting, paid model trials, naming clearance, real-user validation and independent human review remain release work. See `ROADMAP.md`; the source preview does not complete the end-to-end product goal.

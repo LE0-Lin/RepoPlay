@@ -6,11 +6,9 @@
 
 Follow a concrete feature from input to output. Each step connects an explanation, an explicitly illustrative state diagram, and the real code at a fixed GitHub commit. Start with a ready-made tour; no account, API key, or CLI installation is required to explore it.
 
-RepoPlay is the working name of this local v0.1. Domain, package name, and trademark availability have not been checked. Its discovery → shared tour → project interest hypothesis has not been validated with real users or Stars.
+**Early source preview (v0.1).** The player and three pre-generated AgentConfigScore tours work locally. Reading a new public repository is supported, but generating a useful tour for an unfamiliar repository has not yet been demonstrated with a real model provider. The adapter has been tested with offline fixtures. See [ROADMAP.md](ROADMAP.md) for the public-beta acceptance gates.
 
-**Status: development checkpoint, not a public release.** The three built-in tours all cover AgentConfigScore. Public repository reading and an offline-tested model adapter exist; useful generation for unfamiliar repositories has not been demonstrated with a real provider. The code is backed up in [LE0-Lin/RepoPlay](https://github.com/LE0-Lin/RepoPlay), currently a private progress repository. See [ROADMAP.md](ROADMAP.md) for the remaining release gates.
-
-The [development log](docs/DEVELOPMENT_LOG.md) separates earlier local work from Git history, which starts on 2026-11-04.
+This is a local application; there is no hosted demo yet. RepoPlay is a working name. Domain, package name, and trademark availability have not been checked.
 
 ![RepoPlay source-guided feature tour](docs/screenshots/tour-desktop.jpg)
 
@@ -28,8 +26,6 @@ cd repoplay
 npm ci
 npm run dev
 ```
-
-Cloning currently requires access to the private repository. If the source is already on your machine, start with `cd repoplay`.
 
 Open [http://127.0.0.1:3000](http://127.0.0.1:3000). For a production preview:
 
@@ -160,8 +156,12 @@ docs/                Source notice, exported schemas and verification record
 
 To add a guide, create a Tour JSON and source snapshot, register it in `lib/samples.ts`, and run the reference checks. `scripts/make-samples.mjs` is an optional editorial regeneration helper that requires the adjacent AgentConfigScore checkout with the pinned commit; it is never used by the application or build.
 
-## Before a public release
+## Roadmap and contributing
 
-See [ROADMAP.md](ROADMAP.md) and [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md). The user authorized a private GitHub progress repository on 2026-11-04; this does not constitute a public product launch. No public website, paid model trial, promotional post or purchase has been made. The GitHub Star button remains disabled until a real, visitor-accessible RepoPlay repository is configured. It never points to the source project.
+The next milestone is a useful tour for an unfamiliar small repository, followed by reviewed examples from unrelated projects. See [ROADMAP.md](ROADMAP.md) and [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md). Public hosting and anonymous model generation need additional operational controls. No paid model trial or public deployment has been performed.
+
+Bug reports and corrections to explanations are welcome in [Issues](https://github.com/LE0-Lin/RepoPlay/issues). Include the tour/step URL and pinned source reference when reporting a guide problem. Keep credentials out of reports. For code changes, run the verification commands above; a guide correction must also pass the source-reference checks.
+
+RepoPlay is [MIT licensed](LICENSE); embedded source retains its separate notice above. The optional in-app GitHub button is enabled by setting `NEXT_PUBLIC_REPOPLAY_REPOSITORY=https://github.com/LE0-Lin/RepoPlay` and rebuilding. The [development log](docs/DEVELOPMENT_LOG.md) records earlier local work separately from Git history, which starts on 2026-11-04.
 
 For a suggested 90-second screen recording, see [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md). It uses the built-in guide and needs no provider configuration.

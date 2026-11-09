@@ -57,6 +57,15 @@ Verified in the Codex in-app browser, including a 1440 × 1000 desktop viewport 
 - After those changes, `npm run typecheck`, all **21** tests, `npm run verify:samples`, `npm run build` and `node scripts/verify-local.mjs` passed. `npm audit --omit=dev --audit-level=high` returned **0 vulnerabilities** at the time of checking. This reports known registry advisories, not an overall security certification.
 - No paid model/provider trial, public hosting, promotional message, purchase or imported-code execution was performed. No new browser/physical-device verification was performed for this dependency-only change; previous browser observations remain historical evidence.
 
+## Source-publication review — 2026-11-09
+
+- The repository was confirmed private before this review. Public source visibility was authorized for an early preview. README, roadmap and setup documentation now distinguish local source availability from a hosted beta and explicitly describe the unverified generation path.
+- Reinstalled the locked dependencies using `npm ci --ignore-scripts` with Node.js 24.11.1 / npm 11.6.2. Registry audit reported 0 vulnerabilities; the separate production audit also returned 0. No dependency versions changed.
+- Type checking, all 21 tests, the three sample-reference checks and the optimized production build passed. A fresh production process bound to `127.0.0.1:3100` passed the local HTTP smoke script: homepage, all three guide endings, JSON import/export, missing guide, invalid repository and incorrect source excerpt. The homepage correctly reported missing model configuration. No model call was made.
+- Scanned all reachable Git objects in the existing four-commit history (71 unique file blobs), plus their paths, for credential signatures and excluded runtime/environment/private-key files. No matching credentials or excluded files were found. This is a bounded pattern review, not a guarantee of secret detection.
+- Re-fetched all four embedded source files and the original MIT notice from AgentConfigScore at commit `633ccef39a89ba79592d90a68f5410f57bb8bb53` through the GitHub API. Exact content and source blob SHAs matched. Both retained notice copies matched upstream.
+- Inspected the existing desktop screenshot used by the README; it shows the actual tour UI and no credentials. No new browser interaction, native clipboard, physical-phone or provider-generation check was performed during this documentation/publication review. Earlier browser observations remain historical evidence.
+
 ## Remaining verification limits
 
 - The in-app clipboard readback returned an empty value despite the UI write resolving. Clipboard contents were not independently confirmed. The exact URL is exposed in a share field for manual copying, and deep-link navigation was verified. Test native clipboard behavior in a normal browser before release.
